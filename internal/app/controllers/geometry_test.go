@@ -1,14 +1,15 @@
 package controllers_test
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/pantrif/s2-geojson/internal/app/server"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/pantrif/s2-geojson/internal/app/server"
+	"github.com/stretchr/testify/assert"
 )
 
 const (

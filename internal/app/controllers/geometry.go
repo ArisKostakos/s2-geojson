@@ -60,6 +60,7 @@ func (u GeometryController) GetBuffed(c *gin.Context) {
 
 	grownFeatureCollection := geo.PolygonToFeatureCollection(grownPolys)
 	grownFCmarshalled, err := grownFeatureCollection.MarshalJSON() //manually marshalling, to detect errors
+
 	if err != nil {
 		fmt.Errorf("couldn't marshal grownPolys: %v\n", err)
 		c.JSON(200, gin.H{
@@ -67,7 +68,7 @@ func (u GeometryController) GetBuffed(c *gin.Context) {
 		})
 		return
 	}
-
+	fmt.Printf("Returning: %s\n", grownFCmarshalled)
 	c.JSON(200, gin.H{
 		"cells": grownFCmarshalled,
 	})
