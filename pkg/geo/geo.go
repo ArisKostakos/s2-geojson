@@ -214,6 +214,7 @@ func GrowPolygon(poly *s2.Polygon, buffer float64) (*s2.Polygon, error) {
 		//fmt.Printf("center*normal: %s\n", pToString(s2.Point{midPoint.Add(n1Norm.Mul(buffer))}))
 	}
 
+	grownPolyPoints := make([]s2.Point, 0, loop.NumVertices())
 	for i := 0; i < loop.NumVertices(); i++ {
 		var edgeIdA, edgeIdB int
 
@@ -237,14 +238,15 @@ func GrowPolygon(poly *s2.Polygon, buffer float64) (*s2.Polygon, error) {
 		//bis = bis
 		//fmt.Printf("Vertex #%d bis: %s\n", i, pToString(s2.Point{bis}))
 		fmt.Printf("Vertex #%d new: %s\n", i, pToString(s2.Point{offsetVec}))
+		grownPolyPoints = append(grownPolyPoints, s2.Point{offsetVec})
 	}
 
 	fmt.Println("\nMADE NEW GROWN POLYGON:")
-	grownPoly := &s2.Polygon{}
-	//loop := s2.LoopFromPoints(squarePolyPoints)
-	//polygon := s2.PolygonFromLoops([]*s2.Loop{loop})
 
-	return grownPoly, nil
+	grownLoop := s2.LoopFromPoints(grownPolyPoints)
+	grownPolygon := s2.PolygonFromLoops([]*s2.Loop{grownLoop})
+
+	return grownPolygon, nil
 }
 
 func edgeNormal(e s2.Edge) (r3.Vector, r3.Vector) {

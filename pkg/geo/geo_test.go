@@ -125,7 +125,11 @@ func TestPolygonToFeatureCollection(t *testing.T) {
 func TestGrowPolygon(t *testing.T) {
 	loop := s2.LoopFromPoints(squarePolyPoints)
 	polygon := s2.PolygonFromLoops([]*s2.Loop{loop})
-	GrowPolygon(polygon, 10)
+	grownPoly, err := GrowPolygon(polygon, 10)
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+	}
+	fmt.Printf("grown: %v\n", grownPoly)
 	t.Error()
 }
 func TestGeoJsonPointsToPolygon(t *testing.T) {
