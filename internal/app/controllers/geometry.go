@@ -34,10 +34,11 @@ func (u GeometryController) GetBuffed(c *gin.Context) {
 	for _, f := range fs {
 
 		if f.Geometry.IsPolygon() {
-			for _, p := range f.Geometry.Polygon {
-				p := geo.PointsToPolygon(p)
+			for _, poly := range f.Geometry.Polygon {
+				p := geo.PointsToPolygon(poly)
 				fmt.Printf("Poly: %v", p)
-				grownPoly, err := geo.GrowPolygon(p, 0.01)
+				//grownPoly, err := geo.GrowPolygon(p, 0.01)
+				grownPoly := p
 				if err != nil {
 					fmt.Errorf("couldn't grow the poly: %v\n", err)
 					continue

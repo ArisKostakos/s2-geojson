@@ -44,6 +44,14 @@ var validJSON = []byte(`
 }
 `)
 
+func TestDecodeTest2(t *testing.T) {
+	p, _ := UnmarshalGeoJSON(getSinglePolyGeoJSON())
+	poly := GeoJSONPointsToPolygon(p)
+
+	fmt.Println(poly)
+	t.Error()
+}
+
 func TestDecodeGeoJSON(t *testing.T) {
 	r, err := DecodeGeoJSON(validJSON)
 	assert.NoError(t, err)
@@ -90,15 +98,14 @@ var l1 = []RawPoint{{
 },
 }
 
-/*
 var squarePolyPoints = []s2.Point{
 	s2.Point{r3.Vector{-50, 50, 0}},
 	s2.Point{r3.Vector{50, 50, 0}},
 	s2.Point{r3.Vector{50, -50, 0}},
 	s2.Point{r3.Vector{-50, -50, 0}},
 }
-*/
 
+/*
 var squarePolyPoints = []s2.Point{
 	s2.Point{r3.Vector{-50, 50, 0}},
 	s2.Point{r3.Vector{-20, 70, 0}},
@@ -106,7 +113,7 @@ var squarePolyPoints = []s2.Point{
 	s2.Point{r3.Vector{0, 0, 0}},
 	s2.Point{r3.Vector{30, -60, 0}},
 	s2.Point{r3.Vector{-100, -5, 0}},
-}
+}*/
 
 func TestPolygonToFeatureCollection(t *testing.T) {
 	loop := s2.LoopFromPoints(squarePolyPoints)
@@ -125,6 +132,7 @@ func TestPolygonToFeatureCollection(t *testing.T) {
 func TestGrowPolygon(t *testing.T) {
 	loop := s2.LoopFromPoints(squarePolyPoints)
 	polygon := s2.PolygonFromLoops([]*s2.Loop{loop})
+	fmt.Printf("normal: %v\n", polygon)
 	grownPoly, err := GrowPolygon(polygon, 10)
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
