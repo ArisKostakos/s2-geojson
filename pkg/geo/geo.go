@@ -254,3 +254,30 @@ func edgeNormal(e s2.Edge) (r3.Vector, r3.Vector) {
 func edgeMidpoint(e s2.Edge) r3.Vector {
 	return r3.Vector{(e.V0.X + e.V1.X) / 2, (e.V0.Y + e.V1.Y) / 2, 0}
 }
+
+func PolygonToFeatureCollection(polygon *s2.Polygon) *geojson.FeatureCollection {
+	var newPolygon [][][]float64
+	z := polygon.Loops()[0]
+
+	for _, point := range z.Vertices() {
+		mv := r3.Vector{
+			X: point.X,
+			Y: point.Y,
+			Z: point.Z,
+		}
+		mp := s2.LatLngFromPoint(s2.Point{mv})
+		ep := [][]float64{
+			{
+				mp.Lng.Degrees(),
+				mp.Lat.Degrees(),
+			},
+		}
+		newPolygon = append(newPolygon, ep)
+	}
+
+	gm := geojson.NewPolygonFeature(newPolygon)
+	ft := geojson.NewFeatureCollection()
+	ft.AddFeature(gm)
+
+	return ft
+}
