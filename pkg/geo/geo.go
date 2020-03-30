@@ -257,24 +257,26 @@ func edgeMidpoint(e s2.Edge) r3.Vector {
 	return r3.Vector{(e.V0.X + e.V1.X) / 2, (e.V0.Y + e.V1.Y) / 2, 0}
 }
 
-func PolygonToFeatureCollection(polygon *s2.Polygon) *geojson.FeatureCollection {
+func PolygonToFeatureCollection(polygon []*s2.Polygon) *geojson.FeatureCollection {
 	var newPolygon [][][]float64
-	z := polygon.Loops()[0]
-
-	for _, point := range z.Vertices() {
-		mv := r3.Vector{
-			X: point.X,
-			Y: point.Y,
-			Z: point.Z,
+	for _, polygon := range polygon {
+		for _, loop := range polygon.Loops() {
+			for _, vertex := range loop.Vertices() {
+				mv := r3.Vector{
+					X: vertex.X,
+					Y: vertex.Y,
+					Z: vertex.Z,
+				}
+				mp := s2.LatLngFromPoint(s2.Point{mv})
+				ep := [][]float64{
+					{
+						mp.Lng.Degrees(),
+						mp.Lat.Degrees(),
+					},
+				}
+				newPolygon = append(newPolygon, ep)
+			}
 		}
-		mp := s2.LatLngFromPoint(s2.Point{mv})
-		ep := [][]float64{
-			{
-				mp.Lng.Degrees(),
-				mp.Lat.Degrees(),
-			},
-		}
-		newPolygon = append(newPolygon, ep)
 	}
 
 	gm := geojson.NewPolygonFeature(newPolygon)

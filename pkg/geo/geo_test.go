@@ -111,7 +111,9 @@ var squarePolyPoints = []s2.Point{
 func TestPolygonToFeatureCollection(t *testing.T) {
 	loop := s2.LoopFromPoints(squarePolyPoints)
 	polygon := s2.PolygonFromLoops([]*s2.Loop{loop})
-	lala := PolygonToFeatureCollection(polygon)
+	var s2Polygons []*s2.Polygon
+	s2Polygons = append(s2Polygons, polygon)
+	lala := PolygonToFeatureCollection(s2Polygons)
 	yoyo, err := lala.MarshalJSON()
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
