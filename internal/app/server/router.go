@@ -1,9 +1,10 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/pantrif/s2-geojson/internal/app/controllers"
-	"net/http"
 )
 
 // NewRouter setups all gin routes, templates & static files
@@ -20,7 +21,7 @@ func NewRouter(root string) *gin.Engine {
 		c.HTML(http.StatusOK, "index.html", nil)
 	})
 
-	r.POST("/cover", p.Cover)
+	r.POST("/get_buffed", p.GetBuffed)
 	r.POST("/check_intersection", p.CheckIntersection)
 
 	return r

@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/geo/s1"
@@ -14,10 +13,10 @@ import (
 // GeometryController struct
 type GeometryController struct{}
 
-// Cover uses s2 region coverer to cover geometries of geojson (only points and polygons supported)
-func (u GeometryController) Cover(c *gin.Context) {
+// GetBuffed bluh...
+func (u GeometryController) GetBuffed(c *gin.Context) {
 	gJSON := []byte(c.PostForm("geojson"))
-	maxLevel, err := strconv.Atoi(c.PostForm("max_level_geojson"))
+	//maxLevel, err := strconv.Atoi(c.PostForm("max_level_geojson"))  add buffer thingie
 
 	fs, err := geo.DecodeGeoJSON(gJSON)
 
@@ -28,8 +27,8 @@ func (u GeometryController) Cover(c *gin.Context) {
 		return
 	}
 
-	var tokens []string
-	var s2cells [][][]float64
+	//var tokens []string
+	//var s2cells [][][]float64
 
 	for _, f := range fs {
 
@@ -53,9 +52,7 @@ func (u GeometryController) Cover(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"max_level_geojson": maxLevel,
-		"cell_tokens":       strings.Join(tokens, ","),
-		"cells":             s2cells,
+		"cells": "tralala",
 	})
 }
 

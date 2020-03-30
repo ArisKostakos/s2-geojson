@@ -241,6 +241,8 @@ func GrowPolygon(poly *s2.Polygon, buffer float64) (*s2.Polygon, error) {
 
 	fmt.Println("\nMADE NEW GROWN POLYGON:")
 	grownPoly := &s2.Polygon{}
+	//loop := s2.LoopFromPoints(squarePolyPoints)
+	//polygon := s2.PolygonFromLoops([]*s2.Loop{loop})
 
 	return grownPoly, nil
 }

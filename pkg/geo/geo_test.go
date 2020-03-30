@@ -1,6 +1,7 @@
 package geo
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/golang/geo/r3"
@@ -105,6 +106,18 @@ var squarePolyPoints = []s2.Point{
 	s2.Point{r3.Vector{0, 0, 0}},
 	s2.Point{r3.Vector{30, -60, 0}},
 	s2.Point{r3.Vector{-100, -5, 0}},
+}
+
+func TestPolygonToFeatureCollection(t *testing.T) {
+	loop := s2.LoopFromPoints(squarePolyPoints)
+	polygon := s2.PolygonFromLoops([]*s2.Loop{loop})
+	lala := PolygonToFeatureCollection(polygon)
+	yoyo, err := lala.MarshalJSON()
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+	}
+	fmt.Printf("Fc: %s\n", yoyo)
+	t.Error()
 }
 
 func TestGrowPolygon(t *testing.T) {

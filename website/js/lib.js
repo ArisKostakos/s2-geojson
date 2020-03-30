@@ -3,7 +3,7 @@ let map, geoJsonLayer, geoJsonBufferedLayer, geoJsonEditor, geoJsonBuffEditor, m
 let polygon_cells = [];
 let circle_cells = [];
 
-let coverUrl = '/cover';
+let getBuffedUrl = '/get_buffed';
 let checkPointUrl = '/check_intersection';
 let self, app;
 
@@ -196,6 +196,9 @@ let s2_geojson = {
         //self.regionCover();
         geoJsonLayer = L.geoJSON(JSON.parse(v), {}).addTo(map);
         map.fitBounds(geoJsonLayer.getBounds());
+
+        //Add growPoly
+        self.RequestBuffed();
     },
     GeoJsonBuffToMap : function() {
         let v = geoJsonBuffEditor.getValue();
@@ -221,6 +224,19 @@ let s2_geojson = {
                 polygon_cells.push(L.polygon(s2cells[i], {color: 'red'}).addTo(map));
             }
         });*/
+    },
+    RequestBuffed : function() {
+        let params = "geojson=" + geoJsonEditor.getValue().trim();
+        self.postRequest(params, getBuffedUrl, function (response) {
+            let res = JSON.parse(response);
+            geoJsonBuffEditor.setValue(res.cells);
+            /*
+            document.getElementById("cell_tokens").value = res.cells;
+            let s2cells = res.cells;
+            for (let i = 0; i < s2cells.length; i++) {
+                polygon_cells.push(L.polygon(s2cells[i], {color: 'red'}).addTo(map));
+            }*/
+        });
     },
     postRequest : function(params, url, callback) {
         let xmlHttp = new XMLHttpRequest();
