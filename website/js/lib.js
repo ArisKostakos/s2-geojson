@@ -1,5 +1,5 @@
 
-let map, geoJsonLayer, geoJsonEditor, marker, circleLayer;
+let map, geoJsonLayer, geoJsonBufferedLayer, geoJsonEditor, geoJsonBuffEditor, marker, circleLayer;
 let polygon_cells = [];
 let circle_cells = [];
 
@@ -12,6 +12,7 @@ let s2_geojson = {
     Init: function() {
         self = this;
         this.initEditor();
+        this.initBuffEditor();
         this.initMap();
         this.initMapControls();
         this.bindEvents();
@@ -19,6 +20,13 @@ let s2_geojson = {
     },
     initEditor: function() {
         geoJsonEditor = CodeMirror.fromTextArea(document.getElementById('geoJsonInput'), {
+            mode: "javascript",
+            theme: "default",
+            lineNumbers: true,
+        });
+    },
+    initBuffEditor: function() {
+        geoJsonBuffEditor = CodeMirror.fromTextArea(document.getElementById('geoJsonBuffInput'), {
             mode: "javascript",
             theme: "default",
             lineNumbers: true,
@@ -64,20 +72,10 @@ let s2_geojson = {
         geoJsonInput.oninput = function() {
             self.GeoJsonToMap();
         };
-        let maxLevelGeoJsonInput = document.getElementById("max_level_geojson");
-        let max_level_geojson_value = document.getElementById("max_level_geojson_value");
-        max_level_geojson_value.innerHTML = maxLevelGeoJsonInput.value;
-        maxLevelGeoJsonInput.oninput = function() {
-            self.GeoJsonToMap();
-            max_level_geojson_value.innerHTML = this.value;
-        };
 
-        let minLevelGeoJsonInput = document.getElementById("min_level_geojson");
-        let min_level_geojson_value = document.getElementById("min_level_geojson_value");
-        min_level_geojson_value.innerHTML = minLevelGeoJsonInput.value;
-        minLevelGeoJsonInput.oninput = function() {
-            self.GeoJsonToMap();
-            min_level_geojson_value.innerHTML = this.value;
+        let geoJsonBuffInput = document.getElementById("geoJsonBuffInput");
+        geoJsonBuffInput.oninput = function() { //remove oninput ability when debug done
+            self.GeoJsonBuffToMap();
         };
 
         document.getElementById("lat").oninput = function() {
@@ -89,6 +87,7 @@ let s2_geojson = {
 
         map.on('click', this.onMapClick);
         geoJsonEditor.on("change", self.onGeoJsonChange);
+        geoJsonBuffEditor.on("change", self.GeoJsonBuffToMap);
 
         map.on('draw:drawstart', function () {
             map.off('click', self.onMapClick);
@@ -122,8 +121,6 @@ let s2_geojson = {
         }
         marker = L.marker([lat, lng]).addTo(map);
 
-        let max_level_geojson = document.getElementById("max_level_geojson").value;
-        let min_level_geojson = document.getElementById("min_level_geojson").value;
         let max_level_circle = document.getElementById("max_level_circle").value;
 
         let radius = document.getElementById("radius").value;
@@ -136,6 +133,7 @@ let s2_geojson = {
 
         let geoJSON = geoJsonEditor.getValue();
         if (geoJSON !== '') {
+            /*
             let params = "lat=" + lat + "&lng=" + lng + "&min_level_geojson=" + min_level_geojson + "&max_level_geojson=" + max_level_geojson + "&max_level_circle=" + max_level_circle + "&radius=" + radius + "&geojson=" + geoJSON.trim();
             self.postRequest(params, checkPointUrl, function (response) {
                 let res = JSON.parse(response);
@@ -155,7 +153,7 @@ let s2_geojson = {
                         circle_cells.push(L.polygon(s2_cells[i], {color: 'black'}).addTo(map));
                     }
                 }
-            });
+            });*/
         }
     },
     onDrawCreated : function(e) {
@@ -175,7 +173,7 @@ let s2_geojson = {
                 "features": [geoJsonLayer.toGeoJSON(14)]
             };
             geoJsonEditor.setValue(JSON.stringify(json,null, 2));
-            self.regionCover();
+            //self.regionCover();
             map.addLayer(geoJsonLayer);
             if (type === 'polygon') {
                 map.fitBounds(geoJsonLayer.getBounds());
@@ -185,6 +183,9 @@ let s2_geojson = {
     onGeoJsonChange : function() {
         self.GeoJsonToMap();
     },
+    onGeoJsonBuffChange : function() {
+        self.GeoJsonBuffToMap();
+    },
     GeoJsonToMap : function() {
         let v = geoJsonEditor.getValue();
 
@@ -192,11 +193,20 @@ let s2_geojson = {
             map.removeLayer(geoJsonLayer)
         }
 
-        self.regionCover();
+        //self.regionCover();
         geoJsonLayer = L.geoJSON(JSON.parse(v), {}).addTo(map);
         map.fitBounds(geoJsonLayer.getBounds());
     },
-    regionCover : function() {
+    GeoJsonBuffToMap : function() {
+        let v = geoJsonBuffEditor.getValue();
+
+        if (geoJsonBufferedLayer) {
+            map.removeLayer(geoJsonBufferedLayer)
+        }
+        geoJsonBufferedLayer = L.geoJSON(JSON.parse(v), {color: 'red'}).addTo(map);
+        map.fitBounds(geoJsonBufferedLayer.getBounds());
+
+        /*
         self.removePolygonCells();
 
         let max_level_geojson = document.getElementById("max_level_geojson").value;
@@ -210,7 +220,7 @@ let s2_geojson = {
             for (let i = 0; i < s2cells.length; i++) {
                 polygon_cells.push(L.polygon(s2cells[i], {color: 'red'}).addTo(map));
             }
-        });
+        });*/
     },
     postRequest : function(params, url, callback) {
         let xmlHttp = new XMLHttpRequest();

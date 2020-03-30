@@ -89,11 +89,22 @@ var l1 = []RawPoint{{
 },
 }
 
+/*
 var squarePolyPoints = []s2.Point{
 	s2.Point{r3.Vector{-50, 50, 0}},
 	s2.Point{r3.Vector{50, 50, 0}},
 	s2.Point{r3.Vector{50, -50, 0}},
 	s2.Point{r3.Vector{-50, -50, 0}},
+}
+*/
+
+var squarePolyPoints = []s2.Point{
+	s2.Point{r3.Vector{-50, 50, 0}},
+	s2.Point{r3.Vector{-20, 70, 0}},
+	s2.Point{r3.Vector{60, 10, 0}},
+	s2.Point{r3.Vector{0, 0, 0}},
+	s2.Point{r3.Vector{30, -60, 0}},
+	s2.Point{r3.Vector{-100, -5, 0}},
 }
 
 func TestGrowPolygon(t *testing.T) {

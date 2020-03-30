@@ -1,12 +1,14 @@
 package controllers
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang/geo/s1"
 	"github.com/golang/geo/s2"
 	"github.com/pantrif/s2-geojson/pkg/geo"
-	"strconv"
-	"strings"
 )
 
 // GeometryController struct
@@ -16,7 +18,6 @@ type GeometryController struct{}
 func (u GeometryController) Cover(c *gin.Context) {
 	gJSON := []byte(c.PostForm("geojson"))
 	maxLevel, err := strconv.Atoi(c.PostForm("max_level_geojson"))
-	minLevel, err := strconv.Atoi(c.PostForm("min_level_geojson"))
 
 	fs, err := geo.DecodeGeoJSON(gJSON)
 
@@ -35,16 +36,19 @@ func (u GeometryController) Cover(c *gin.Context) {
 		if f.Geometry.IsPolygon() {
 			for _, p := range f.Geometry.Polygon {
 				p := geo.PointsToPolygon(p)
-				_, t, c := geo.CoverPolygon(p, maxLevel, minLevel)
-				s2cells = append(s2cells, c...)
-				tokens = append(tokens, t...)
+				fmt.Printf("Poly: %v", p)
+				geo.GrowPolygon(p, 0.01)
+				//_, t, c := geo.CoverPolygon(p, maxLevel, minLevel)
+				//s2cells = append(s2cells, c...)
+				//tokens = append(tokens, t...)
 			}
 		}
 		if f.Geometry.IsPoint() {
 			point := geo.Point{Lat: f.Geometry.Point[1], Lng: f.Geometry.Point[0]}
-			_, t, c := geo.CoverPoint(point, maxLevel)
-			s2cells = append(s2cells, c...)
-			tokens = append(tokens, t)
+			_ = point
+			//_, t, c := geo.CoverPoint(point, maxLevel)
+			//s2cells = append(s2cells, c...)
+			//tokens = append(tokens, t)
 		}
 	}
 

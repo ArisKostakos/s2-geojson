@@ -182,7 +182,7 @@ func IsPointInsidePolygons(loc Point, partnerPolygons []*s2.Polygon) bool {
 }
 
 func pToString(p s2.Point) string {
-	return fmt.Sprintf("\t(%0.2f\t%0.2f)", p.X, p.Y)
+	return fmt.Sprintf("\t(%0.5f\t%0.5f)", p.X, p.Y)
 }
 
 // GrowPolygon returns a new polygon, scaled with given buffer

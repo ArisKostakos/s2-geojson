@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/pantrif/s2-geojson/internal/app/server"
 )
 
 const (
-	rootPath = "./website"
+	rootPath = "../../website"
 )
 
 func main() {
