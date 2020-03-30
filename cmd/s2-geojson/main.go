@@ -11,6 +11,7 @@ const (
 
 func main() {
 	if err := server.Init(rootPath); err != nil {
+		fmt.Printf("Hello from Theo")
 		fmt.Printf("failed to init: %v", err)
 	}
 }
