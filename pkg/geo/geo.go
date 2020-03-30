@@ -263,21 +263,24 @@ func PolygonToFeatureCollection(polygon []*s2.Polygon) *geojson.FeatureCollectio
 	var newPolygon [][][]float64
 	for _, polygon := range polygon {
 		for _, loop := range polygon.Loops() {
+
+			var points [][]float64
 			for _, vertex := range loop.Vertices() {
+
 				mv := r3.Vector{
 					X: vertex.X,
 					Y: vertex.Y,
 					Z: vertex.Z,
 				}
 				mp := s2.LatLngFromPoint(s2.Point{mv})
-				ep := [][]float64{
-					{
+				ep := []float64{
 						mp.Lng.Degrees(),
 						mp.Lat.Degrees(),
-					},
-				}
-				newPolygon = append(newPolygon, ep)
+					}
+				points = append(points, ep)
 			}
+
+			newPolygon = append(newPolygon, points)
 		}
 	}
 
