@@ -29,6 +29,7 @@ func (u GeometryController) GetBuffed(c *gin.Context) {
 
 	//var tokens []string
 	//var s2cells [][][]float64
+	grownPolys := []*s2.Polygon{}
 
 	for _, f := range fs {
 
@@ -36,7 +37,13 @@ func (u GeometryController) GetBuffed(c *gin.Context) {
 			for _, p := range f.Geometry.Polygon {
 				p := geo.PointsToPolygon(p)
 				fmt.Printf("Poly: %v", p)
-				geo.GrowPolygon(p, 0.01)
+				grownPoly, err := geo.GrowPolygon(p, 0.01)
+				if err != nil {
+					fmt.Errorf("couldn't grow the poly: %v\n", err)
+					continue
+				}
+				grownPolys = append(grownPolys, grownPoly)
+
 				//_, t, c := geo.CoverPolygon(p, maxLevel, minLevel)
 				//s2cells = append(s2cells, c...)
 				//tokens = append(tokens, t...)
@@ -51,8 +58,18 @@ func (u GeometryController) GetBuffed(c *gin.Context) {
 		}
 	}
 
+	grownFeatureCollection := geo.PolygonToFeatureCollection(grownPolys)
+	grownFCmarshalled, err := grownFeatureCollection.MarshalJSON() //manually marshalling, to detect errors
+	if err != nil {
+		fmt.Errorf("couldn't marshal grownPolys: %v\n", err)
+		c.JSON(200, gin.H{
+			"cells": "failleed",
+		})
+		return
+	}
+
 	c.JSON(200, gin.H{
-		"cells": "tralala",
+		"cells": grownFCmarshalled,
 	})
 }
 
