@@ -308,17 +308,47 @@ func GrowPolygon(poly *s2.Polygon, bufferKm float64) (*s2.Polygon, error) {
 		//fmt.Printf("center*normal: %s\n", pToString(s2.Point{midPoint.Add(n1Norm.Mul(buffer))}))
 	}
 
-	newEdges := make([]s2.Edge, 0, loop.NumVertices())
-	grownPolyPoints := make([]s2.Point, 0, loop.NumVertices()*2)
+	grownPolyPoints := make([]s2.Point, 0, loop.NumVertices()*3)
 	for i, e := range oldEdges {
 		a := s2.Point{r3.Vector{e.V0.X + kmToLng(bufferKm, e.V0.Y)*edgeNormals[i].X, e.V0.Y + kmToLat(bufferKm)*edgeNormals[i].Y, 0}}
 		b := s2.Point{r3.Vector{e.V1.X + kmToLng(bufferKm, e.V1.Y)*edgeNormals[i].X, e.V1.Y + kmToLat(bufferKm)*edgeNormals[i].Y, 0}}
-		newEdges = append(newEdges, s2.Edge{a, b})
+
+		//Create corner vertex
+		var edgeIdA, edgeIdB int
+
+		if i == 0 {
+			edgeIdA = loop.NumVertices() - 1
+		} else {
+			edgeIdA = i - 1
+		}
+
+		edgeIdB = i
+
+		vec := loop.Vertices()[i]
+		na := edgeNormals[edgeIdA]
+		nb := edgeNormals[edgeIdB]
+
+		cNormal := na.Add(nb).Normalize()
+
+		//l := buffer / math.Sqrt(1+na.Dot(nb))
+
+		offsetVec := r3.Vector{vec.X + kmToLng(bufferKm, vec.Y)*cNormal.X, vec.Y + kmToLat(bufferKm)*cNormal.Y, 0}
+		//bis = bis
+		//fmt.Printf("Vertex #%d bis: %s\n", i, pToString(s2.Point{bis}))
+		//fmt.Printf("Vertex #%d new: %s\n", i, pToString(s2.Point{offsetVec}))
+		grownPolyPoints = append(grownPolyPoints, s2.Point{offsetVec})
+
 		grownPolyPoints = append(grownPolyPoints, a)
 		grownPolyPoints = append(grownPolyPoints, b)
 	}
+	/*
+		newEdges := make([]s2.Edge, 0, loop.NumVertices())
+		newEdges = append(newEdges, s2.Edge{a, b})
+		for i, newvec := range grownPolyPoints {
 
-	fmt.Println("Num of edges:", len(newEdges))
+		}*/
+
+	//fmt.Println("Num of edges:", len(newEdges))
 	//Eliminate Crossings
 	//grownPolyPoints2 := make([]s2.Point, 0, loop.NumVertices()*2)
 	/*
