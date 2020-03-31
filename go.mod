@@ -3,6 +3,7 @@ module github.com/pantrif/s2-geojson
 go 1.13
 
 require (
+	github.com/beatlabs/patron v0.40.0
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-playground/universal-translator v0.17.0 // indirect
 	github.com/golang/geo v0.0.0-20181008215305-476085157cff
