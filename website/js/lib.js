@@ -42,7 +42,8 @@ let s2_geojson = {
                 'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
             id: 'mapbox/streets-v11',
             tileSize: 512,
-            zoomOffset: -1
+            zoomOffset: -1,
+            measureControl: true
         }).addTo(map);
     },
     initMapControls : function() {
@@ -57,15 +58,21 @@ let s2_geojson = {
             edit: {
                 featureGroup: new L.FeatureGroup()
             }
-        })
-        );
+        }));
+
+        map.addControl(
+            new L.control.measure({
+                position: 'topleft'
+            }));
     },
     bindEvents : function() {
-        let max_level_circle_slider = document.getElementById("max_level_circle");
-        let max_level_circle_value = document.getElementById("max_level_circle_value");
-        max_level_circle_value.innerHTML = max_level_circle_slider.value;
-        max_level_circle_slider.oninput = function() {
-            max_level_circle_value.innerHTML = this.value;
+        let buffer_in_meters_slider = document.getElementById("buffer_in_meters");
+        let buffer_in_meters_value = document.getElementById("buffer_in_meters_value");
+        buffer_in_meters_value.innerHTML = buffer_in_meters_slider.value;
+        buffer_in_meters_slider.oninput = function() {
+            buffer_in_meters_value.innerHTML = this.value;
+            //Add growPoly
+            self.RequestBuffed();
         };
 
         let geoJsonInput = document.getElementById("geoJsonInput");
@@ -173,11 +180,12 @@ let s2_geojson = {
                 "features": [geoJsonLayer.toGeoJSON(14)]
             };
             geoJsonEditor.setValue(JSON.stringify(json,null, 2));
-            //self.regionCover();
             map.addLayer(geoJsonLayer);
             if (type === 'polygon') {
                 map.fitBounds(geoJsonLayer.getBounds());
             }
+            //Add growPoly
+            self.RequestBuffed();
         }
     },
     onGeoJsonChange : function() {
@@ -207,7 +215,7 @@ let s2_geojson = {
             map.removeLayer(geoJsonBufferedLayer)
         }
         geoJsonBufferedLayer = L.geoJSON(JSON.parse(v), {color: 'red'}).addTo(map);
-        map.fitBounds(geoJsonBufferedLayer.getBounds());
+        //map.fitBounds(geoJsonBufferedLayer.getBounds());
 
         /*
         self.removePolygonCells();
@@ -226,10 +234,11 @@ let s2_geojson = {
         });*/
     },
     RequestBuffed : function() {
-        let params = "geojson=" + geoJsonEditor.getValue().trim();
+        let buffer_in_meters = document.getElementById("buffer_in_meters").value;
+        let params = "geojson=" + geoJsonEditor.getValue().trim() +"&buffer_meters="+buffer_in_meters;
         self.postRequest(params, getBuffedUrl, function (response) {
             let res = JSON.parse(response);
-            geoJsonBuffEditor.setValue(res.cells);
+            geoJsonBuffEditor.setValue(JSON.stringify(JSON.parse(atob(res.cells)),null, 2));
             /*
             document.getElementById("cell_tokens").value = res.cells;
             let s2cells = res.cells;

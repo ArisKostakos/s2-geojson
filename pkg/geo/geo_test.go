@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s2"
+	geojson "github.com/paulmach/go.geojson"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -129,16 +130,35 @@ func TestPolygonToFeatureCollection(t *testing.T) {
 	t.Error()
 }
 
+func TestGrowPolygon2(t *testing.T) {
+	vall, _ := geojson.UnmarshalFeatureCollection(getMultiPolyGeoJSON())
+
+	hello := vall.Features[0].Geometry.Polygon
+
+	sup := [][][]float64{hello[0][:len(hello[0])-1]}
+	fmt.Printf("normal: %v\n", sup)
+	yoyo, err := GrowPolygon2(sup, 0.001)
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+	}
+	fmt.Printf("grown: %v\n", sup)
+	_ = yoyo
+	//assert.Equal(t, polygon, grownPoly)
+	t.Error()
+}
+
 func TestGrowPolygon(t *testing.T) {
 	loop := s2.LoopFromPoints(squarePolyPoints)
 	polygon := s2.PolygonFromLoops([]*s2.Loop{loop})
 	fmt.Printf("normal: %v\n", polygon)
-	grownPoly, err := GrowPolygon(polygon, 10)
+	grownPoly, err := GrowPolygon(polygon, 0)
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
 	}
 	fmt.Printf("grown: %v\n", grownPoly)
-	t.Error()
+
+	assert.Equal(t, polygon, grownPoly)
+	//t.Error()
 }
 func TestGeoJsonPointsToPolygon(t *testing.T) {
 	p := GeoJSONPointsToPolygon(l1)

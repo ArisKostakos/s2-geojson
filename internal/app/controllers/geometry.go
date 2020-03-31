@@ -16,7 +16,21 @@ type GeometryController struct{}
 // GetBuffed bluh...
 func (u GeometryController) GetBuffed(c *gin.Context) {
 	gJSON := []byte(c.PostForm("geojson"))
-	//maxLevel, err := strconv.Atoi(c.PostForm("max_level_geojson"))  add buffer thingie
+	bufferInMeters, err := strconv.Atoi(c.PostForm("buffer_meters"))
+	fmt.Printf("Received: %s\n", gJSON)
+	fmt.Printf("Received: %d\n", bufferInMeters)
+	/*
+		fffcccc, err := geojson.UnmarshalFeatureCollection(gJSON)
+		if err != nil {
+			log.Warnf("failed to unmarshal partner polygon with err: %v", err)
+		}*/
+	/*
+		pppppp, err := geo.ParseFeatureCollection(fffcccc)
+		if err != nil {
+			log.Warnf("failed to parse partner polygon with err: %v", err)
+		}
+	*/
+	//vallll := geo.GeoJSONPointsToPolygon(pppppp)
 
 	fs, err := geo.DecodeGeoJSON(gJSON)
 
@@ -29,16 +43,16 @@ func (u GeometryController) GetBuffed(c *gin.Context) {
 
 	//var tokens []string
 	//var s2cells [][][]float64
-	grownPolys := []*s2.Polygon{}
 
+	grownPolys := []*s2.Polygon{}
+	buffkm := (float64(bufferInMeters) / 1000)
 	for _, f := range fs {
 
 		if f.Geometry.IsPolygon() {
 			for _, poly := range f.Geometry.Polygon {
-				p := geo.PointsToPolygon(poly)
+				p := geo.PointsToPolygon2(poly)
 				fmt.Printf("Poly: %v", p)
-				//grownPoly, err := geo.GrowPolygon(p, 0.01)
-				grownPoly := p
+				grownPoly, err := geo.GrowPolygon(p, buffkm)
 				if err != nil {
 					fmt.Errorf("couldn't grow the poly: %v\n", err)
 					continue
@@ -59,6 +73,30 @@ func (u GeometryController) GetBuffed(c *gin.Context) {
 		}
 	}
 
+	/*
+		grownPolys := []*s2.Polygon{}
+		for _, normalPoly := range vallll {
+			grownPoly, _ := geo.GrowPolygon(normalPoly, 0.001)
+			grownPolys = append(grownPolys, grownPoly)
+		}*/
+	//grownPoly, err := geo.GrowPolygon(vallll[0], 0)
+	//vallll = append(vallll, grownPoly)
+
+	/*
+		hello := fffcccc.Features[0].Geometry.Polygon
+
+		sup := [][][]float64{hello[0][:len(hello[0])-1]}
+		fmt.Printf("normal: %v\n", sup)
+		yoyo, err := geo.GrowPolygon2(sup, 0.001)
+		if err != nil {
+			fmt.Printf("err: %v\n", err)
+		}
+		fmt.Printf("grown: %v\n", sup)
+
+		gm := geojson.NewPolygonFeature(yoyo)
+		ft := geojson.NewFeatureCollection()
+		ft.AddFeature(gm)
+	*/
 	grownFeatureCollection := geo.PolygonToFeatureCollection(grownPolys)
 	grownFCmarshalled, err := grownFeatureCollection.MarshalJSON() //manually marshalling, to detect errors
 

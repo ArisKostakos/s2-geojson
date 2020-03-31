@@ -17,9 +17,10 @@
     <link rel="stylesheet" href="css/spectre.min.css">
     <link rel="stylesheet" href="css/style.css" />
     <script src="js/lib.js"></script>
+     <link rel="stylesheet" href="css/leaflet.measure.css"/>
+     <script src="js/leaflet.measure.js"></script>
 </head>
 <body>
-
 
 <div class="container">
     <div class="columns">
@@ -50,7 +51,10 @@
                         <label class="form-label" for="geoJsonInput">Geojson collection</label>
                         <textarea class="form-input" id="geoJsonInput"></textarea>
                     </div>
-
+                    <div class="form-group">
+                        <label class="form-label" for="buffer_in_meters">Buffer in meters: <span id="buffer_in_meters_value"></span></label>
+                        <input type="range" class="range_input" name="buffer_in_meters" id="buffer_in_meters" value="3000" min="0" max="40000"><br>
+                    </div>
                     <div class="form-group">
                         <label class="form-label" for="geoJsonBuffInput">BUFFERED Geojson collection</label>
                         <textarea class="form-input" id="geoJsonBuffInput"></textarea>
