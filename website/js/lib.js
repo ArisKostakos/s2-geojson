@@ -45,6 +45,29 @@ let s2_geojson = {
             zoomOffset: -1,
             measureControl: true
         }).addTo(map);
+
+        // 'file' is a geojson layer
+        L.geoJSON(geoJsonLayer, {
+            onEachFeature: colorlayer,
+            style: {
+                color: "#00008c",
+                opacity: 0.6,
+                fillColor: '#333333',
+                fillOpacity: 0
+            }
+            }).addTo(map);
+            function colorlayer(feature, layer) {
+            layer.on('mouseover', function (e) {
+                layer.setStyle({
+                    fillOpacity: 0.4
+                });
+            });
+            layer.on('mouseout', function (e) {
+                layer.setStyle({
+                    fillOpacity: 0
+                });
+            });
+        }
     },
     initMapControls : function() {
         map.addControl(
@@ -68,9 +91,9 @@ let s2_geojson = {
     bindEvents : function() {
         let buffer_in_meters_slider = document.getElementById("buffer_in_meters");
         let buffer_in_meters_value = document.getElementById("buffer_in_meters_value");
-        buffer_in_meters_value.innerHTML = buffer_in_meters_slider.value;
+        buffer_in_meters_value.value = buffer_in_meters_slider.value;
         buffer_in_meters_slider.oninput = function() {
-            buffer_in_meters_value.innerHTML = this.value;
+            buffer_in_meters_value.value = this.value;
             //Add growPoly
             self.RequestBuffed();
         };
@@ -90,6 +113,14 @@ let s2_geojson = {
         };
         document.getElementById("lng").oninput = function() {
             self.checkPointIntersection();
+        };
+        document.getElementById("buffer_in_meters_value").onchange = function() {
+            if (buffer_in_meters_value.value>30000)
+                buffer_in_meters_value.value=30000
+            if (buffer_in_meters_value.value<0)
+                buffer_in_meters_value.value=0
+            buffer_in_meters_slider.value = buffer_in_meters_value.value;
+            self.RequestBuffed();
         };
 
         map.on('click', this.onMapClick);
@@ -123,44 +154,31 @@ let s2_geojson = {
         if (marker) {
             map.removeLayer(marker)
         }
-        if (circleLayer) {
-            map.removeLayer(circleLayer)
-        }
+
         marker = L.marker([lat, lng]).addTo(map);
 
-        let max_level_circle = document.getElementById("max_level_circle").value;
-
-        let radius = document.getElementById("radius").value;
-
-        if (radius > 0) {
-            circleLayer = L.circle([lat, lng], {radius: radius}).addTo(map);
-        }
-
-        self.removeCircleCells();
-
-        let geoJSON = geoJsonEditor.getValue();
-        if (geoJSON !== '') {
-            /*
-            let params = "lat=" + lat + "&lng=" + lng + "&min_level_geojson=" + min_level_geojson + "&max_level_geojson=" + max_level_geojson + "&max_level_circle=" + max_level_circle + "&radius=" + radius + "&geojson=" + geoJSON.trim();
+        let geoJSONBuffed = geoJsonBuffEditor.getValue();
+        if (geoJSONBuffed !== '') {
+            let params = "lat=" + lat + "&lng=" + lng + "&geojson=" + geoJSONBuffed.trim();
             self.postRequest(params, checkPointUrl, function (response) {
                 let res = JSON.parse(response);
                 let intersectsPointElem = document.getElementById("intersects_with_point");
-                intersectsPointElem.innerHTML = "Features intersects with point: " + res.intersects_with_point;
                 intersectsPointElem.className = "";
-                intersectsPointElem.classList.add(res.intersects_with_point ? "success" : "error");
 
-                let intersectsCircleElem = document.getElementById("intersects_with_circle");
-                intersectsCircleElem.innerHTML = "Features intersects with circle: " + res.intersects_with_circle;
-                intersectsCircleElem.className = "";
-                intersectsCircleElem.classList.add(res.intersects_with_circle ? "success" : "error");
-
-                if (radius > 0) {
-                    let s2_cells = res.cells;
-                    for (let i = 0; i < s2_cells.length; i++) {
-                        circle_cells.push(L.polygon(s2_cells[i], {color: 'black'}).addTo(map));
-                    }
+                if (res.intersections>0)
+                {
+                    intersectsPointElem.classList.add("success");
+                    if (res.intersections==1)
+                        intersectsPointElem.innerHTML = "Marker is inside polygon";
+                    else
+                        intersectsPointElem.innerHTML = "Marker is inside " + res.intersections +" polygons";
                 }
-            });*/
+                else
+                {
+                    intersectsPointElem.classList.add("error");
+                    intersectsPointElem.innerHTML = "No polygons contain the marker";
+                }
+            });
         }
     },
     onDrawCreated : function(e) {
@@ -214,6 +232,12 @@ let s2_geojson = {
         if (geoJsonBufferedLayer) {
             map.removeLayer(geoJsonBufferedLayer)
         }
+
+        if (marker) {
+            map.removeLayer(marker)
+        }
+        document.getElementById("intersects_with_point").innerHTML="";
+
         geoJsonBufferedLayer = L.geoJSON(JSON.parse(v), {color: 'red'}).addTo(map);
         //map.fitBounds(geoJsonBufferedLayer.getBounds());
 

@@ -53,47 +53,6 @@ func PointsToPolygon(points [][]float64) *s2.Polygon {
 	return s2.PolygonFromLoops([]*s2.Loop{loop})
 }
 
-// CoverPolygon converts s2 polygon to cell union and returns the respective cells
-func CoverPolygon(p *s2.Polygon, maxLevel, minLevel int) (s2.CellUnion, []string, [][][]float64) {
-	var tokens []string
-	var s2cells [][][]float64
-
-	rc := &s2.RegionCoverer{MaxLevel: maxLevel, MinLevel: minLevel, MaxCells: maxCells}
-	r := s2.Region(p)
-	covering := rc.Covering(r)
-
-	for _, c := range covering {
-		cell := s2.CellFromCellID(s2.CellIDFromToken(c.ToToken()))
-
-		s2cells = append(s2cells, edgesOfCell(cell))
-
-		tokens = append(tokens, c.ToToken())
-	}
-	return covering, tokens, s2cells
-}
-
-// CoverPoint converts a point to cell based on given level
-func CoverPoint(p Point, maxLevel int) (s2.Cell, string, [][][]float64) {
-	var s2cells [][][]float64
-
-	cid := s2.CellFromLatLng(s2.LatLngFromDegrees(p.Lat, p.Lng)).ID().Parent(maxLevel)
-	cell := s2.CellFromCellID(cid)
-	token := cid.ToToken()
-
-	s2cells = append(s2cells, edgesOfCell(cell))
-
-	return cell, token, s2cells
-}
-
-func edgesOfCell(c s2.Cell) [][]float64 {
-	var edges [][]float64
-	for i := 0; i < 4; i++ {
-		latLng := s2.LatLngFromPoint(c.Vertex(i))
-		edges = append(edges, []float64{latLng.Lat.Degrees(), latLng.Lng.Degrees()})
-	}
-	return edges
-}
-
 // RawPoint is Polygon Points (lat,long).
 type RawPoint = [][]float64
 
@@ -196,6 +155,15 @@ func pToString2(p [][]float64) string {
 	return fmt.Sprintf("\t(%0.5f\t%0.5f)", p[0][0], p[0][1])
 }
 
+func degreeToPoint(lat float64, lon float64) s2.Point {
+	return s2.PointFromLatLng(s2.LatLngFromDegrees(lat, lon))
+}
+
+func pointToDegree(p s2.Point) s2.Point { //returns Lng,Lat
+	latLng := s2.LatLngFromPoint(p)
+	return s2.Point{r3.Vector{latLng.Lng.Degrees(), latLng.Lat.Degrees(), 0}}
+}
+
 // GrowPolygon2 returns a new polygon, scaled with given buffer
 func GrowPolygon2(poly [][][]float64, buffer float64) ([][][]float64, error) {
 	fmt.Println("GOT POLYGON:")
@@ -276,19 +244,76 @@ func pToString(p s2.Point) string {
 
 // GrowPolygon returns a new polygon, scaled with given buffer
 func GrowPolygon(poly *s2.Polygon, bufferKm float64) (*s2.Polygon, error) {
-	fmt.Println("GOT POLYGON:")
+	//fmt.Println("GOT POLYGON:")
 	loop := poly.Loops()[0]
 
 	//IF FIRST AND LASTR THE SAME, IGNORE LAST
 	loop = s2.LoopFromPoints(loop.Vertices()[:loop.NumVertices()-1])
 
-	fmt.Println("points:")
-	for i, v := range loop.Vertices() {
-		fmt.Printf("point #%d:%s\n", i, pToString(v))
-	}
-	fmt.Println("edges:")
-	edgeNormals := make([]r3.Vector, loop.NumVertices())
+	//fmt.Println("points:")
+	/*
+		for i, v := range loop.Vertices() {
+			fmt.Printf("point #%d:%s\n", i, pToString(v))
+		}*/
+	//fmt.Println("edges:")
+
+	//for each edge in polygon:
+	//sum += (x2 - x1) * (y2 + y1)
+
+	/*
+		minDistt := 0.0005
+		minDistFound := 0
+		multiplyPoints := make([]s2.Point, 0, loop.NumVertices()*100)
+		fmt.Println("Vert before:", loop.NumVertices())
+
+		for {
+			minDistFound = 0
+			multiplyPoints = make([]s2.Point, 0, loop.NumVertices()*100)
+			multiplyPoints = append(multiplyPoints, loop.Vertices()[0])
+			for i := 0; i < loop.NumVertices(); i++ {
+				var v1, v2 s2.Point
+				if i == loop.NumVertices()-1 {
+					v1 = loop.Vertices()[i]
+					v2 = loop.Vertices()[0]
+				} else {
+					v1 = loop.Vertices()[i]
+					v2 = loop.Vertices()[i+1]
+				}
+
+				dist := checkLatDistance(v1, v2)
+				//fmt.Println(dist)
+				if dist > minDistt {
+					midP := pointMidpoint(v1, v2)
+					multiplyPoints = append(multiplyPoints, midP)
+					midPd1 := checkLatDistance(v1, midP)
+					midPd2 := checkLatDistance(midP, v2)
+					fmt.Println("dist:", dist)
+					fmt.Println("left:", midPd1)
+					fmt.Println("right:", midPd2)
+					minDistFound += 1
+					//fmt.Println(dist)
+				}
+				if i < loop.NumVertices()-1 {
+					multiplyPoints = append(multiplyPoints, v2)
+				}
+			}
+
+			loop = s2.LoopFromPoints(multiplyPoints)
+			if minDistFound == 0 {
+				break
+			}
+			fmt.Println("Loop verts:", minDistFound, loop.NumVertices())
+		}
+		fmt.Println("Vert after:", loop.NumVertices())
+	*/
+
+	var normalSum float64 = 0
+
+	var edgeNormals []r3.Vector
+	edgeNormalsPos := make([]r3.Vector, loop.NumVertices())
+	edgeNormalsNeg := make([]r3.Vector, loop.NumVertices())
 	oldEdges := make([]s2.Edge, loop.NumVertices())
+
 	for i := 0; i < loop.NumVertices(); i++ {
 		var edge s2.Edge
 		if i == loop.NumVertices()-1 {
@@ -296,18 +321,24 @@ func GrowPolygon(poly *s2.Polygon, bufferKm float64) (*s2.Polygon, error) {
 		} else {
 			edge = s2.Edge{loop.Vertices()[i], loop.Vertices()[i+1]}
 		}
-		fmt.Printf("edge #%d: %s->%s\n", i, pToString(edge.V0), pToString(edge.V1))
+		//fmt.Printf("edge #%d: %s->%s\n", i, pToString(edge.V0), pToString(edge.V1))
 		oldEdges[i] = edge
+		normalSum += (edge.V1.X - edge.V0.X) * (edge.V1.Y + edge.V0.Y)
 		midPoint := s2.Point{edgeMidpoint(edge)}
-		_, n1 := edgeNormal(edge)
-		n1Norm := n1.Normalize()
-		edgeNormals[i] = n1Norm
+		nPos, nNeg := edgeNormal(edge)
+		edgeNormalsPos[i] = nPos.Normalize()
+		edgeNormalsNeg[i] = nNeg.Normalize()
 		_ = midPoint
 		//fmt.Printf("center: %s\n", pToString(midPoint))
-		fmt.Printf("normals: %s\n", pToString(s2.Point{n1Norm}))
+		//fmt.Printf("normals: %s\n", pToString(s2.Point{n1Norm}))
 		//fmt.Printf("center*normal: %s\n", pToString(s2.Point{midPoint.Add(n1Norm.Mul(buffer))}))
 	}
-
+	//fmt.Println("ORDER: ", normalSum)
+	if normalSum > 0 {
+		edgeNormals = edgeNormalsPos
+	} else {
+		edgeNormals = edgeNormalsNeg
+	}
 	grownPolyPoints := make([]s2.Point, 0, loop.NumVertices()*3)
 	for i, e := range oldEdges {
 		a := s2.Point{r3.Vector{e.V0.X + kmToLng(bufferKm, e.V0.Y)*edgeNormals[i].X, e.V0.Y + kmToLat(bufferKm)*edgeNormals[i].Y, 0}}
@@ -341,15 +372,149 @@ func GrowPolygon(poly *s2.Polygon, bufferKm float64) (*s2.Polygon, error) {
 		grownPolyPoints = append(grownPolyPoints, a)
 		grownPolyPoints = append(grownPolyPoints, b)
 	}
-	/*
-		newEdges := make([]s2.Edge, 0, loop.NumVertices())
-		newEdges = append(newEdges, s2.Edge{a, b})
-		for i, newvec := range grownPolyPoints {
 
-		}*/
+	var maxDist float64 = 0
+	var maxDistFirst int = -1
+	var maxDistSecond int = -1
+
+	//distances := make([][]float64, len(grownPolyPoints))
+	for ll, rrr := range grownPolyPoints {
+		//distances[ll] = make([]float64, len(grownPolyPoints))
+		for zzz, ggg := range grownPolyPoints {
+			dist := checkLatDistance(rrr, ggg)
+			if dist > maxDist {
+				maxDist = dist
+				maxDistFirst = ll
+				maxDistSecond = zzz
+			}
+			//fmt.Printf("Distance %f for %d->%d\n", distances[ll][zzz], ll, zzz)
+		}
+	}
+
+	_ = maxDistFirst
+	_ = maxDistSecond
+	//fmt.Printf("Max Distance %f for %d->%d\n", maxDist, maxDistFirst, maxDistSecond)
+	grownPolyPoints3 := make([]s2.Point, 0, len(grownPolyPoints))
+	for plplI, plpl := range grownPolyPoints {
+		if plplI >= maxDistFirst {
+			grownPolyPoints3 = append(grownPolyPoints3, plpl)
+		}
+	}
+	for plplG, plpl2 := range grownPolyPoints {
+		if plplG < maxDistFirst {
+			grownPolyPoints3 = append(grownPolyPoints3, plpl2)
+		}
+	}
+	grownPolyPoints = grownPolyPoints3
+
+	//Eliminate Crossings
+	//fmt.Println("Length Old", len(grownPolyPoints))
+	var grownPolyPoints2 []s2.Point
+	ffff := 0
+	maxLoops := 100
+
+	check, i, y, intPoint := checkInterSections(grownPolyPoints)
+	for check {
+		grownPolyPoints2 = make([]s2.Point, 0, loop.NumVertices()*3)
+		for k, pp := range grownPolyPoints {
+			if k <= i {
+				grownPolyPoints2 = append(grownPolyPoints2, pp)
+			} else {
+				grownPolyPoints2 = append(grownPolyPoints2, intPoint)
+				for kk, ppp := range grownPolyPoints {
+					if kk >= y+1 {
+						grownPolyPoints2 = append(grownPolyPoints2, ppp)
+					}
+				}
+				break
+			}
+		}
+		//fmt.Println("Length Old", len(grownPolyPoints))
+		//fmt.Println("Length New", len(grownPolyPoints2))
+		grownPolyPoints = grownPolyPoints2
+		//fmt.Println("Checking...", check, i, y, intPoint)
+
+		ffff += 1
+		if ffff > maxLoops {
+			fmt.Println("BYEBYE")
+			break
+		}
+
+		check, i, y, intPoint = checkInterSections(grownPolyPoints)
+	}
+	//AGAIN
+
+	maxDist = 0
+	maxDistFirst = -1
+	maxDistSecond = -1
+
+	//distances := make([][]float64, len(grownPolyPoints))
+	for ll, rrr := range grownPolyPoints {
+		//distances[ll] = make([]float64, len(grownPolyPoints))
+		for zzz, ggg := range grownPolyPoints {
+			dist := checkLatDistance(rrr, ggg)
+			if dist > maxDist {
+				maxDist = dist
+				maxDistFirst = ll
+				maxDistSecond = zzz
+			}
+			//fmt.Printf("Distance %f for %d->%d\n", distances[ll][zzz], ll, zzz)
+		}
+	}
+
+	grownPolyPoints3 = make([]s2.Point, 0, len(grownPolyPoints))
+	for plplI, plpl := range grownPolyPoints {
+		if plplI >= maxDistSecond {
+			grownPolyPoints3 = append(grownPolyPoints3, plpl)
+		}
+	}
+	for plplG, plpl2 := range grownPolyPoints {
+		if plplG < maxDistSecond {
+			grownPolyPoints3 = append(grownPolyPoints3, plpl2)
+		}
+	}
+	grownPolyPoints = grownPolyPoints3
+	//Eliminate Crossings
+	//fmt.Println("Length Old", len(grownPolyPoints))
+	ffff = 0
+
+	check, i, y, intPoint = checkInterSections(grownPolyPoints)
+	for check {
+		grownPolyPoints2 = make([]s2.Point, 0, loop.NumVertices()*3)
+		for k, pp := range grownPolyPoints {
+			if k <= i {
+				grownPolyPoints2 = append(grownPolyPoints2, pp)
+			} else {
+				grownPolyPoints2 = append(grownPolyPoints2, intPoint)
+				for kk, ppp := range grownPolyPoints {
+					if kk >= y+1 {
+						grownPolyPoints2 = append(grownPolyPoints2, ppp)
+					}
+				}
+				break
+			}
+		}
+		//fmt.Println("Length Old", len(grownPolyPoints))
+		//fmt.Println("Length New", len(grownPolyPoints2))
+		grownPolyPoints = grownPolyPoints2
+		//fmt.Println("Checking...", check, i, y, intPoint)
+
+		ffff += 1
+		if ffff > maxLoops/2 {
+			fmt.Println("BYEBYE")
+			break
+		}
+
+		check, i, y, intPoint = checkInterSections(grownPolyPoints)
+	}
+
+	//END AGAIN
+	//fmt.Println("Length New", len(grownPolyPoints))
+	//newEdges := make([]s2.Edge, 0, loop.NumVertices())
+	//newEdges = append(newEdges, s2.Edge{a, b})
 
 	//fmt.Println("Num of edges:", len(newEdges))
-	//Eliminate Crossings
+
 	//grownPolyPoints2 := make([]s2.Point, 0, loop.NumVertices()*2)
 	/*
 		for i := 0; i < len(newEdges)-1; i++ {
@@ -394,7 +559,7 @@ func GrowPolygon(poly *s2.Polygon, bufferKm float64) (*s2.Polygon, error) {
 			grownPolyPoints = append(grownPolyPoints, s2.Point{offsetVec})
 		}*/
 
-	fmt.Println("\nMADE NEW GROWN POLYGON:")
+	//fmt.Println("\nMADE NEW GROWN POLYGON:")
 
 	grownLoop := s2.LoopFromPoints(grownPolyPoints)
 	grownPolygon := s2.PolygonFromLoops([]*s2.Loop{grownLoop})
@@ -402,32 +567,81 @@ func GrowPolygon(poly *s2.Polygon, bufferKm float64) (*s2.Polygon, error) {
 	return grownPolygon, nil
 }
 
-func checkEdgeCross(e1, e2 s2.Edge) (bool, s2.Point) {
-	/*
-		if s2.CrossingSign(e1.V0, e1.V1, e2.V0, e2.V1) == s2.Cross {
-			fmt.Println("CROSSING")
-			return true, s2.Intersection(e1.V0, e1.V1, e2.V0, e2.V1)
+func checkInterSectionsNEW(poly []s2.Point) (bool, int, int, s2.Point) {
+	for i := 0; i < len(poly)-1; i++ {
+		//fmt.Printf("Examining: %d to %d\n", i, i+1)
+		for j := len(poly) - 2; j >= i+2+1; j-- {
+			//fmt.Printf("With: %d to %d\n", j, j+1)
+			crossing, crossPoint := checkEdgeCross(poly[i], poly[i+1], poly[j], poly[j+1])
+			if crossing {
+				//fmt.Printf("Cross between %d,%d and %d,%d at point %v\n", i, i+1, j, j+1, crossPoint)
+				return true, i, j, crossPoint
+			}
 		}
-
-		return false, s2.Point{}
-	*/
-	var val float64 = 1000
-	e1p0 := s2.Point{r3.Vector{e1.V0.X * val, e1.V0.Y * val, 0}}
-	e1p1 := s2.Point{r3.Vector{e1.V1.X * val, e1.V1.Y * val, 0}}
-	e2p0 := s2.Point{r3.Vector{e2.V0.X * val, e2.V0.Y * val, 0}}
-	e2p1 := s2.Point{r3.Vector{e2.V1.X * val, e2.V1.Y * val, 0}}
-	l1 := CreateLine(e1p0, e1p1)
-	l2 := CreateLine(e2p0, e2p1)
-
-	result, err := Intersection(l1, l2)
-	if err != nil {
-		fmt.Println("NOOOOOOOOO")
-		return false, s2.Point{}
-
 	}
-	fmt.Println("YESSSSSS")
-	return true, result
 
+	return false, 0, 0, s2.Point{}
+}
+
+func checkInterSections(poly []s2.Point) (bool, int, int, s2.Point) {
+	for i := 0; i < len(poly)-1; i++ {
+		//fmt.Printf("Examining: %d to %d\n", i, i+1)
+		for j := i + 2 + 1; j < len(poly)-1; j++ {
+			//fmt.Printf("With: %d to %d\n", j, j+1)
+			crossing, crossPoint := checkEdgeCross(poly[i], poly[i+1], poly[j], poly[j+1])
+			if crossing {
+				//fmt.Printf("Cross between %d,%d and %d,%d at point %v\n", i, i+1, j, j+1, crossPoint)
+				return true, i, j, crossPoint
+			}
+		}
+	}
+
+	return false, 0, 0, s2.Point{}
+}
+
+func checkLatDistance(a1, b1 s2.Point) float64 {
+	a := degreeToPoint(a1.Y, a1.X)
+	b := degreeToPoint(b1.Y, b1.X)
+
+	//a.Distance(b)
+	//a1.Distance(b1)
+	//Vector Distance
+
+	return a.Distance(b).Degrees()
+}
+
+func checkEdgeCross(a1, b1, c1, d1 s2.Point) (bool, s2.Point) {
+	a := degreeToPoint(a1.Y, a1.X)
+	b := degreeToPoint(b1.Y, b1.X)
+	c := degreeToPoint(c1.Y, c1.X)
+	d := degreeToPoint(d1.Y, d1.X)
+
+	//fmt.Println("Cross?:", crossyy)
+	if s2.CrossingSign(a, b, c, d) == s2.Cross {
+		//fmt.Println("CROSSING")
+		return true, pointToDegree(s2.Intersection(a, b, c, d))
+	}
+
+	return false, s2.Point{}
+
+	/*
+		var val float64 = 1000
+		e1p0 := s2.Point{r3.Vector{e1.V0.X * val, e1.V0.Y * val, 0}}
+		e1p1 := s2.Point{r3.Vector{e1.V1.X * val, e1.V1.Y * val, 0}}
+		e2p0 := s2.Point{r3.Vector{e2.V0.X * val, e2.V0.Y * val, 0}}
+		e2p1 := s2.Point{r3.Vector{e2.V1.X * val, e2.V1.Y * val, 0}}
+		l1 := CreateLine(e1p0, e1p1)
+		l2 := CreateLine(e2p0, e2p1)
+
+		result, err := Intersection(l1, l2)
+		if err != nil {
+			fmt.Println("NOOOOOOOOO")
+			return false, s2.Point{}
+
+		}
+		fmt.Println("YESSSSSS")
+		return true, result
+	*/
 	/*
 		var val float64 = 1000
 		e1p0 := s2.Point{r3.Vector{e1.V0.X * val, e1.V0.Y * val, 0}}
@@ -451,30 +665,6 @@ func kmToLng(km float64, theta float64) float64 {
 	return (km / EarthRadius) * (180 / math.Pi) / math.Cos(theta*math.Pi/180)
 }
 
-type Line struct {
-	slope float64
-	yint  float64
-}
-
-func CreateLine(a, b s2.Point) Line {
-	slope := (b.Y - a.Y) / (b.X - a.X)
-	yint := a.Y - slope*a.X
-	return Line{slope, yint}
-}
-
-func EvalX(l Line, x float64) float64 {
-	return l.slope*x + l.yint
-}
-
-func Intersection(l1, l2 Line) (s2.Point, error) {
-	if l1.slope == l2.slope {
-		return s2.Point{}, errors.New("The lines do not intersect")
-	}
-	x := (l2.yint - l1.yint) / (l1.slope - l2.slope)
-	y := EvalX(l1, x)
-	return s2.Point{r3.Vector{x, y, 0}}, nil
-}
-
 func edgeNormal(e s2.Edge) (r3.Vector, r3.Vector) {
 	dx := e.V1.X - e.V0.X
 	dy := e.V1.Y - e.V0.Y
@@ -483,6 +673,10 @@ func edgeNormal(e s2.Edge) (r3.Vector, r3.Vector) {
 
 func edgeMidpoint(e s2.Edge) r3.Vector {
 	return r3.Vector{(e.V0.X + e.V1.X) / 2, (e.V0.Y + e.V1.Y) / 2, 0}
+}
+
+func pointMidpoint(v0, v1 s2.Point) s2.Point {
+	return s2.Point{r3.Vector{(v0.X + v1.X) / 2, (v0.Y + v1.Y) / 2, 0}}
 }
 
 func PolygonToFeatureCollection(polygon []*s2.Polygon) *geojson.FeatureCollection {

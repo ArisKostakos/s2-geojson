@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang/geo/s1"
 	"github.com/golang/geo/s2"
 	"github.com/pantrif/s2-geojson/pkg/geo"
 )
@@ -17,8 +16,8 @@ type GeometryController struct{}
 func (u GeometryController) GetBuffed(c *gin.Context) {
 	gJSON := []byte(c.PostForm("geojson"))
 	bufferInMeters, err := strconv.Atoi(c.PostForm("buffer_meters"))
-	fmt.Printf("Received: %s\n", gJSON)
-	fmt.Printf("Received: %d\n", bufferInMeters)
+	//fmt.Printf("Received: %s\n", gJSON)
+	//fmt.Printf("Received: %d\n", bufferInMeters)
 	/*
 		fffcccc, err := geojson.UnmarshalFeatureCollection(gJSON)
 		if err != nil {
@@ -107,7 +106,7 @@ func (u GeometryController) GetBuffed(c *gin.Context) {
 		})
 		return
 	}
-	fmt.Printf("Returning: %s\n", grownFCmarshalled)
+	//fmt.Printf("Returning: %s\n", grownFCmarshalled)
 	c.JSON(200, gin.H{
 		"cells": grownFCmarshalled,
 	})
@@ -117,12 +116,12 @@ func (u GeometryController) GetBuffed(c *gin.Context) {
 func (u GeometryController) CheckIntersection(c *gin.Context) {
 	lat, err := strconv.ParseFloat(c.PostForm("lat"), 64)
 	lng, err := strconv.ParseFloat(c.PostForm("lng"), 64)
-	radius, err := strconv.ParseFloat(c.PostForm("radius"), 64)
+	//radius, err := strconv.ParseFloat(c.PostForm("radius"), 64)
 
 	gJSON := []byte(c.PostForm("geojson"))
-	maxLevel, err := strconv.Atoi(c.PostForm("max_level_geojson"))
-	minLevel, err := strconv.Atoi(c.PostForm("min_level_geojson"))
-	maxLevelCircle, err := strconv.Atoi(c.PostForm("max_level_circle"))
+	//maxLevel, err := strconv.Atoi(c.PostForm("max_level_geojson"))
+	//minLevel, err := strconv.Atoi(c.PostForm("min_level_geojson"))
+	//maxLevelCircle, err := strconv.Atoi(c.PostForm("max_level_circle"))
 
 	fs, err := geo.DecodeGeoJSON(gJSON)
 
@@ -133,67 +132,27 @@ func (u GeometryController) CheckIntersection(c *gin.Context) {
 		return
 	}
 
-	angle := s1.Angle((radius / 1000) / geo.EarthRadius)
-	ca := s2.CapFromCenterAngle(s2.PointFromLatLng(s2.LatLngFromDegrees(lat, lng)), angle)
-	circeCov := &s2.RegionCoverer{MaxLevel: maxLevelCircle, MaxCells: 300}
-	circleRegion := s2.Region(ca)
-	circleCovering := circeCov.Covering(circleRegion)
-
-	var values []string
-	var s2cells [][][]float64
-
-	for _, c := range circleCovering {
-		c1 := s2.CellFromCellID(s2.CellIDFromToken(c.ToToken()))
-
-		var s2cell [][]float64
-		for i := 0; i < 4; i++ {
-			latlng := s2.LatLngFromPoint(c1.Vertex(i))
-			s2cell = append(s2cell, []float64{latlng.Lat.Degrees(), latlng.Lng.Degrees()})
-		}
-
-		s2cells = append(s2cells, s2cell)
-
-		values = append(values, c.ToToken())
-	}
-
 	ll := s2.LatLngFromDegrees(lat, lng)
-	cell := s2.CellFromLatLng(ll)
+	intersectionPoint := s2.PointFromLatLng(ll)
 
-	intersectsPoint, intersectsCircle := false, false
+	intersectionsFound := 0
 
 	for _, f := range fs {
-
 		if f.Geometry.IsPolygon() {
 			for _, p := range f.Geometry.Polygon {
-				p := geo.PointsToPolygon(p)
-				covering, _, _ := geo.CoverPolygon(p, maxLevel, minLevel)
+				polygon := geo.PointsToPolygon(p)
 
-				if covering.IntersectsCell(cell) {
-					intersectsPoint = true
+				if polygon.ContainsPoint(intersectionPoint) {
+					intersectionsFound += 1
+					fmt.Println("Intersection!")
+				} else {
+					fmt.Println("No intersection")
 				}
-				if covering.Intersects(circleCovering) {
-					intersectsCircle = true
-				}
-			}
-		}
-
-		if f.Geometry.IsPoint() {
-			point := geo.Point{Lat: f.Geometry.Point[1], Lng: f.Geometry.Point[0]}
-			cc, _, _ := geo.CoverPoint(point, maxLevel)
-
-			if cell.IntersectsCell(cc) {
-				intersectsPoint = true
-			}
-			if circleCovering.IntersectsCell(cc) {
-				intersectsCircle = true
 			}
 		}
 	}
 
 	c.JSON(200, gin.H{
-		"intersects_with_point":  intersectsPoint,
-		"intersects_with_circle": intersectsCircle,
-		"radius":                 radius,
-		"cells":                  s2cells,
+		"intersections": intersectionsFound,
 	})
 }
